@@ -275,8 +275,8 @@ class TestSuite(unittest.TestCase):
     )
     def test_additional_invalid_score_request(self, arguments):
         request = {
-            "account": "Колбаса&Палка",
-            "login": "К&П",
+            "account": "horns&hoofs",
+            "login": "h&f",
             "method": "online_score",
             "arguments": arguments,
         }
@@ -303,8 +303,8 @@ class TestSuite(unittest.TestCase):
     )
     def test_additional_invalid_interests_request(self, arguments):
         request = {
-            "account": "Палка&Колбаса",
-            "login": "П&К",
+            "account": "horns&hoofs",
+            "login": "h&f",
             "method": "clients_interests",
             "arguments": arguments,
         }
