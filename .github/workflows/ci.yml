@@ -12,21 +12,16 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ['^3.12']
+        python-version: ['3.12']
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: |
-          # Install dependencies if you have a requirements.txt
-          # pip install -r requirements.txt
-          echo "No additional dependencies to install."
 
       - name: Run Tests
         run: |
