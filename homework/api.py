@@ -8,7 +8,7 @@ import hashlib
 import uuid
 from argparse import ArgumentParser
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from scoring import get_score, get_interests
+from homework.scoring import get_score, get_interests
 
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
@@ -64,7 +64,7 @@ class Field:
 class CharField(Field):
     def validate(self, value):
         super().validate(value)
-        if value is not None and value != '':
+        if value is not None and value != "":
             if not isinstance(value, str):
                 raise ValueError(f"'{self.name}' must be a string")
 
@@ -81,7 +81,7 @@ class EmailField(CharField):
     def validate(self, value):
         super().validate(value)
         if value:
-            if '@' not in value:
+            if "@" not in value:
                 raise ValueError(f"'{self.name}' must contain '@'")
 
 
@@ -97,7 +97,7 @@ class PhoneField(Field):
                 raise ValueError(f"'{self.name}' must contain only digits")
             if len(value) != 11:
                 raise ValueError(f"'{self.name}' must be 11 digits")
-            if not value.startswith('7'):
+            if not value.startswith("7"):
                 raise ValueError(f"'{self.name}' must start with '7'")
 
 
@@ -106,7 +106,7 @@ class DateField(Field):
         super().validate(value)
         if value:
             try:
-                datetime.datetime.strptime(value, '%d.%m.%Y')
+                datetime.datetime.strptime(value, "%d.%m.%Y")
             except ValueError:
                 raise ValueError(f"'{self.name}' must be in format 'DD.MM.YYYY'")
 
@@ -115,11 +115,13 @@ class BirthDayField(DateField):
     def validate(self, value):
         super().validate(value)
         if value:
-            birthday = datetime.datetime.strptime(value, '%d.%m.%Y')
+            birthday = datetime.datetime.strptime(value, "%d.%m.%Y")
             today = datetime.datetime.today()
             age = (today - birthday).days // 365
             if age > 70:
-                raise ValueError(f"'{self.name}' must be less than or equal to 70 years old")
+                raise ValueError(
+                    f"'{self.name}' must be less than or equal to 70 years old"
+                )
 
 
 class GenderField(Field):
@@ -158,8 +160,7 @@ class BaseRequest:
     @classmethod
     def fields(cls):
         return {
-            name: attr for name, attr in cls.__dict__.items()
-            if isinstance(attr, Field)
+            name: attr for name, attr in cls.__dict__.items() if isinstance(attr, Field)
         }
 
     def is_valid(self):
@@ -196,12 +197,13 @@ class OnlineScoreRequest(BaseRequest):
     def validate(self):
         super().validate()
         pairs = [
-            ('phone', 'email'),
-            ('first_name', 'last_name'),
-            ('gender', 'birthday'),
+            ("phone", "email"),
+            ("first_name", "last_name"),
+            ("gender", "birthday"),
         ]
         if not any(
-            (getattr(self, field[0], None) is not None) and (getattr(self, field[1], None) is not None)
+            (getattr(self, field[0], None) is not None)
+            and (getattr(self, field[1], None) is not None)
             for field in pairs
         ):
             self.errors.append(
@@ -218,33 +220,34 @@ class ClientsInterestsRequest(BaseRequest):
 def check_auth(request):
     if request.is_admin:
         digest = hashlib.sha512(
-            (datetime.datetime.now().strftime("%Y%m%d%H") + ADMIN_SALT).encode('utf-8')
+            (datetime.datetime.now().strftime("%Y%m%d%H") + ADMIN_SALT).encode("utf-8")
         ).hexdigest()
     else:
         digest = hashlib.sha512(
-            (request.account + request.login + SALT).encode('utf-8')
+            (request.account + request.login + SALT).encode("utf-8")
         ).hexdigest()
     return digest == request.token
 
 
 def method_handler(request, ctx, store):
-    method_request = MethodRequest(**request['body'])
+    method_request = MethodRequest(**request["body"])
     method_request.validate()
     if not method_request.is_valid():
-        return {'error': method_request.errors}, INVALID_REQUEST
+        return {"error": method_request.errors}, INVALID_REQUEST
     if not check_auth(method_request):
-        return {'error': 'Forbidden'}, FORBIDDEN
+        return {"error": "Forbidden"}, FORBIDDEN
 
     method = method_request.method
     arguments = method_request.arguments or {}
-    if method == 'online_score':
+    if method == "online_score":
         online_score_request = OnlineScoreRequest(**arguments)
         online_score_request.validate()
         if not online_score_request.is_valid():
-            return {'error': online_score_request.errors}, INVALID_REQUEST
+            return {"error": online_score_request.errors}, INVALID_REQUEST
 
-        ctx['has'] = [
-            name for name in online_score_request.fields()
+        ctx["has"] = [
+            name
+            for name in online_score_request.fields()
             if getattr(online_score_request, name) is not None
         ]
 
@@ -260,15 +263,15 @@ def method_handler(request, ctx, store):
                 first_name=online_score_request.first_name,
                 last_name=online_score_request.last_name,
             )
-        return {'score': score}, OK
+        return {"score": score}, OK
 
-    elif method == 'clients_interests':
+    elif method == "clients_interests":
         clients_interests_request = ClientsInterestsRequest(**arguments)
         clients_interests_request.validate()
         if not clients_interests_request.is_valid():
-            return {'error': clients_interests_request.errors}, INVALID_REQUEST
+            return {"error": clients_interests_request.errors}, INVALID_REQUEST
 
-        ctx['nclients'] = len(clients_interests_request.client_ids)
+        ctx["nclients"] = len(clients_interests_request.client_ids)
         response = {
             str(cid): get_interests(store, cid)
             for cid in clients_interests_request.client_ids
@@ -276,7 +279,7 @@ def method_handler(request, ctx, store):
         return response, OK
 
     else:
-        return {'error': 'Method not found'}, NOT_FOUND
+        return {"error": "Method not found"}, NOT_FOUND
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
@@ -284,38 +287,43 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
     store = None  # placeholder for data storage if needed
 
     def get_request_id(self, headers):
-        return headers.get('HTTP_X_REQUEST_ID', uuid.uuid4().hex)
+        return headers.get("HTTP_X_REQUEST_ID", uuid.uuid4().hex)
 
     def do_POST(self):
         response, code = {}, OK
         request = None
-        context = {'request_id': self.get_request_id(self.headers)}
+        context = {"request_id": self.get_request_id(self.headers)}
         try:
-            length = int(self.headers['Content-Length'])
-            data = self.rfile.read(length).decode('utf-8')
+            length = int(self.headers["Content-Length"])
+            data = self.rfile.read(length).decode("utf-8")
             request_body = json.loads(data)
-            path = self.path.strip('/')
+            path = self.path.strip("/")
             logging.info(f"Received request: {data}")
             if path in self.router:
                 handler = self.router[path]
-                response, code = handler({'body': request_body, 'headers': self.headers}, context, self.store)
+                response, code = handler(
+                    {"body": request_body, "headers": self.headers}, context, self.store
+                )
             else:
                 code = NOT_FOUND
-                response = {'error': ERRORS[NOT_FOUND]}
+                response = {"error": ERRORS[NOT_FOUND]}
         except Exception as e:
             logging.exception("Exception during request processing")
             code = INTERNAL_ERROR
-            response = {'error': ERRORS[INTERNAL_ERROR]}
+            response = {"error": ERRORS[INTERNAL_ERROR]}
 
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         if code not in ERRORS:
-            response_body = {'code': code, 'response': response}
+            response_body = {"code": code, "response": response}
         else:
-            response_body = {'code': code, 'error': response.get('error', ERRORS.get(code, 'Unknown Error'))}
+            response_body = {
+                "code": code,
+                "error": response.get("error", ERRORS.get(code, "Unknown Error")),
+            }
         logging.info(f"Response: {response_body}")
-        self.wfile.write(json.dumps(response_body).encode('utf-8'))
+        self.wfile.write(json.dumps(response_body).encode("utf-8"))
 
 
 if __name__ == "__main__":
@@ -326,8 +334,8 @@ if __name__ == "__main__":
     logging.basicConfig(
         filename=args.log,
         level=logging.INFO,
-        format='[%(asctime)s] %(levelname).1s %(message)s',
-        datefmt='%Y.%m.%d %H:%M:%S'
+        format="[%(asctime)s] %(levelname).1s %(message)s",
+        datefmt="%Y.%m.%d %H:%M:%S",
     )
     server = HTTPServer(("localhost", args.port), MainHTTPHandler)
     logging.info(f"Starting server at {args.port}")
