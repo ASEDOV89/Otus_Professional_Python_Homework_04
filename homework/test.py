@@ -27,19 +27,24 @@ class TestSuite(unittest.TestCase):
 
     def get_response(self, request):
         return api.method_handler(
-            {"body": request, "headers": self.headers}, self.context, self.settings
+            {"body": request, "headers": self.headers},
+            self.context,
+            self.settings,
         )
 
     def set_valid_auth(self, request):
         if request.get("login") == api.ADMIN_LOGIN:
             request["token"] = hashlib.sha512(
-                (datetime.datetime.now().strftime("%Y%m%d%H") + api.ADMIN_SALT).encode(
-                    "utf-8"
-                )
+                (
+                    datetime.datetime.now().strftime("%Y%m%d%H")
+                    + api.ADMIN_SALT
+                ).encode("utf-8")
             ).hexdigest()
         else:
             msg = (
-                request.get("account", "") + request.get("login", "") + api.SALT
+                request.get("account", "")
+                + request.get("login", "")
+                + api.SALT
             ).encode("utf-8")
             request["token"] = hashlib.sha512(msg).hexdigest()
 
@@ -78,9 +83,17 @@ class TestSuite(unittest.TestCase):
 
     @cases(
         [
-            {"account": "horns&hoofs", "login": "h&f", "method": "online_score"},
+            {
+                "account": "horns&hoofs",
+                "login": "h&f",
+                "method": "online_score",
+            },
             {"account": "horns&hoofs", "login": "h&f", "arguments": {}},
-            {"account": "horns&hoofs", "method": "online_score", "arguments": {}},
+            {
+                "account": "horns&hoofs",
+                "method": "online_score",
+                "arguments": {},
+            },
         ]
     )
     def test_invalid_method_request(self, request):
@@ -95,8 +108,16 @@ class TestSuite(unittest.TestCase):
             {"phone": "79175002040"},
             {"phone": "89175002040", "email": "stupnikov@otus.ru"},
             {"phone": "79175002040", "email": "stupnikovotus.ru"},
-            {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": -1},
-            {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": "1"},
+            {
+                "phone": "79175002040",
+                "email": "stupnikov@otus.ru",
+                "gender": -1,
+            },
+            {
+                "phone": "79175002040",
+                "email": "stupnikov@otus.ru",
+                "gender": "1",
+            },
             {
                 "phone": "79175002040",
                 "email": "stupnikov@otus.ru",
@@ -124,7 +145,11 @@ class TestSuite(unittest.TestCase):
                 "first_name": "s",
                 "last_name": 2,
             },
-            {"phone": "79175002040", "birthday": "01.01.2000", "first_name": "s"},
+            {
+                "phone": "79175002040",
+                "birthday": "01.01.2000",
+                "first_name": "s",
+            },
             {"email": "stupnikov@otus.ru", "gender": 1, "last_name": 2},
         ]
     )
@@ -174,7 +199,9 @@ class TestSuite(unittest.TestCase):
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code, arguments)
         score = response.get("score")
-        self.assertTrue(isinstance(score, (int, float)) and score >= 0, arguments)
+        self.assertTrue(
+            isinstance(score, (int, float)) and score >= 0, arguments
+        )
         self.assertEqual(sorted(self.context["has"]), sorted(arguments.keys()))
 
     def test_ok_score_admin_request(self):
@@ -242,22 +269,30 @@ class TestSuite(unittest.TestCase):
                 for v in response.values()
             )
         )
-        self.assertEqual(self.context.get("nclients"), len(arguments["client_ids"]))
+        self.assertEqual(
+            self.context.get("nclients"), len(arguments["client_ids"])
+        )
 
     @cases(
         [
             {"first_name": 123, "last_name": "Doe"},  # имя не строкой
             {"first_name": "John", "last_name": []},  # фамилия не строкой
-            {"phone": None, "email": "email@example.com"},  # отстствует номер телефона
+            # отстствует номер телефона
+            {"phone": None, "email": "email@example.com"},
             {
                 "phone": "notaphonenumber",
                 "email": "email@example.com",
             },  # некорректный номер телефона
             {"phone": "71234567890", "email": "invalidemail"},  # кривой email
-            {"birthday": "31-12-1999", "gender": 1},  # неправильный формат даты
-            {"birthday": "01.01.1800", "gender": 1},  # дата рождения очень древняя
+            {
+                "birthday": "31-12-1999",
+                "gender": 1,
+            },  # неправильный формат даты
+            # дата рождения очень древняя
+            {"birthday": "01.01.1800", "gender": 1},
             {"gender": 3, "birthday": "01.01.1990"},  # неопределённый пол :)
-            {"gender": "male", "birthday": "01.01.1990"},  # пол не в числовом формате
+            # пол не в числовом формате
+            {"gender": "male", "birthday": "01.01.1990"},
             {
                 "email": "example.com",
                 "first_name": "Test",
@@ -297,7 +332,8 @@ class TestSuite(unittest.TestCase):
                 "client_ids": [1, "2", 3],
                 "date": "01.01.2020",
             },  # client_ids сожержит строку
-            {"client_ids": [1, 2, 3], "date": "2020-01-01"},  # дата в кривом формате
+            # дата в кривом формате
+            {"client_ids": [1, 2, 3], "date": "2020-01-01"},
             {"client_ids": [], "date": "01.01.2020"},  # client_ids пустой
         ]
     )
@@ -316,4 +352,3 @@ class TestSuite(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
